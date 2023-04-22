@@ -1,5 +1,5 @@
 import './styles/style.css'
-import Lenis from 'lenis-main'
+// import Lenis from '@studio-freight/lenis'
 // import gsap from 'gsap'  // [import GSAP have to import in the function's js file]
 
 import home from './pages/home/home'
