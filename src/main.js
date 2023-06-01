@@ -4,7 +4,6 @@ import gsap from 'gsap'  // [import GSAP have to import in the function's js fil
 
 import home from './pages/home/home'
 import homeScroll from './pages/home/home-scroll'
-import p5Dots from './pages/home/p5-dots'
 
 // import ScrollTrigger from 'gsap/ScrollTrigger'   [import GSAP have to import in the function's js file]
 // import home from './pages/home/home'  [imprort js file to main.js]
@@ -33,5 +32,4 @@ if(isHome)
 {
     home()
     homeScroll()
-    p5Dots()
 }
