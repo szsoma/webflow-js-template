@@ -1,9 +1,10 @@
 import './styles/style.css'
-// import Lenis from '@studio-freight/lenis'
-// import gsap from 'gsap'  // [import GSAP have to import in the function's js file]
+import Lenis from '@studio-freight/lenis'
+import gsap from 'gsap'  // [import GSAP have to import in the function's js file]
 
 import home from './pages/home/home'
 import homeScroll from './pages/home/home-scroll'
+import p5Dots from './pages/home/p5-dots'
 
 // import ScrollTrigger from 'gsap/ScrollTrigger'   [import GSAP have to import in the function's js file]
 // import home from './pages/home/home'  [imprort js file to main.js]
@@ -11,7 +12,7 @@ import homeScroll from './pages/home/home-scroll'
 // don't forget to register plugins
 //gsap.registerPlugin(ScrollTrigger, Flip); 
 
-/* 
+
 // Lenis SmoothScroll
 function scroll()
 {
@@ -25,11 +26,12 @@ function scroll()
     requestAnimationFrame(raf)    
 }
 
-scroll() */
+scroll();
 
 const isHome = document.querySelector('body').classList.contains('body--home')
 if(isHome)
 {
     home()
     homeScroll()
+    p5Dots()
 }
