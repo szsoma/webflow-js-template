@@ -1,10 +1,10 @@
 /*!
- * Flip 3.9.1
- * https://greensock.com
+ * Flip 3.12.4
+ * https://gsap.com
  *
- * @license Copyright 2008-2021, GreenSock. All rights reserved.
- * Subject to the terms at https://greensock.com/standard-license or for
- * Club GreenSock members, the agreement issued with that membership.
+ * @license Copyright 2008-2023, GreenSock. All rights reserved.
+ * Subject to the terms at https://gsap.com/standard-license or for
+ * Club GSAP members, the agreement issued with that membership.
  * @author: Jack Doyle, jack@greensock.com
 */
 
@@ -18,6 +18,7 @@ var _id = 1,
     _batchAction,
     _body,
     _closestTenth,
+    _getStyleSaver,
     _forEachBatch = function _forEachBatch(batch, name) {
   return batch.actions.forEach(function (a) {
     return a.vars[name] && a.vars[name](a);
@@ -166,6 +167,13 @@ _callbacks = _listToArray("onStart,onUpdate,onComplete,onReverseComplete,onInter
   for (; i < css.length; i += 2) {
     css[i + 1] ? style[css[i]] = css[i + 1] : style.removeProperty(css[i]);
   }
+
+  if (!css[css.indexOf("transform") + 1] && style.translate) {
+    // CSSPlugin adds scale, translate, and rotate inline CSS as "none" in order to keep CSS rules from contaminating transforms.
+    style.removeProperty("translate");
+    style.removeProperty("scale");
+    style.removeProperty("rotate");
+  }
 },
     _setFinalStates = function _setFinalStates(comps, onlyTransforms) {
   comps.forEach(function (c) {
@@ -258,9 +266,11 @@ _makeAbsolute = function _makeAbsolute(elState, fallbackNode, ignoreBatch) {
         c.t._gsap.renderTransform(1); // we must force transforms to render on anything that isn't being made position: absolute, otherwise the absolute position happens and then when animation begins it applies transforms which can create a new stacking context, throwing off positioning!
 
 
-        c.t.style.width = c.b.width + "px"; // otherwise things can collapse when contents are made position: absolute.
+        if (c.b.isVisible) {
+          c.t.style.width = c.b.width + "px"; // otherwise things can collapse when contents are made position: absolute.
 
-        c.t.style.height = c.b.height + "px";
+          c.t.style.height = c.b.height + "px";
+        }
       }
     });
   }
@@ -324,8 +334,7 @@ _makeAbsolute = function _makeAbsolute(elState, fallbackNode, ignoreBatch) {
       scaleY = toState.scaleY,
       rotation = toState.rotation,
       bounds = toState.bounds,
-      cssText = vars && element.style.cssText,
-      transform = vars && element.getBBox && element.getAttribute("transform"),
+      styles = vars && _getStyleSaver && _getStyleSaver(element, "transform"),
       dimensionState = fromState,
       _toState$matrix = toState.matrix,
       e = _toState$matrix.e,
@@ -340,7 +349,7 @@ _makeAbsolute = function _makeAbsolute(elState, fallbackNode, ignoreBatch) {
       matrix,
       bbox;
 
-  if (simple) {
+  if (simple || !parent) {
     scaleX = scaleY = 1;
     rotation = skewX = 0;
   } else {
@@ -388,7 +397,7 @@ _makeAbsolute = function _makeAbsolute(elState, fallbackNode, ignoreBatch) {
 
   applyProps && _applyProps(element, toState.props);
 
-  if (simple) {
+  if (simple || !parent) {
     x += e - fromState.matrix.e;
     y += f - fromState.matrix.f;
   } else if (deep || parent !== toState.parent) {
@@ -420,9 +429,7 @@ _makeAbsolute = function _makeAbsolute(elState, fallbackNode, ignoreBatch) {
 
   if (vars && !(vars instanceof ElementState)) {
     // revert
-    element.style.cssText = cssText;
-    element.getBBox && element.setAttribute("transform", transform || "");
-    cache.uncache = 1;
+    styles && styles.revert();
   } else {
     // or apply the transform immediately
     cache.x = x + "px";
@@ -523,7 +530,8 @@ _makeAbsolute = function _makeAbsolute(elState, fallbackNode, ignoreBatch) {
     paused: paused,
     repeat: repeat,
     repeatDelay: repeatDelay,
-    yoyo: yoyo
+    yoyo: yoyo,
+    data: "isFlip"
   }),
       remainingProps = tweenVars,
       entering = [],
@@ -592,7 +600,8 @@ _makeAbsolute = function _makeAbsolute(elState, fallbackNode, ignoreBatch) {
           isVisible: 1
         }),
         a: toNode,
-        sd: 0
+        sd: 0,
+        entering: 1
       }); // to include it in the "entering" Array and do absolute positioning if necessary
 
       el._flip = _batch ? _batch.timeline : animation;
@@ -618,14 +627,14 @@ _makeAbsolute = function _makeAbsolute(elState, fallbackNode, ignoreBatch) {
       a = comp.a;
       b = comp.b;
 
-      if (prune && !a.isDifferent(b)) {
+      if (prune && !a.isDifferent(b) && !comp.entering) {
         // only flip if things changed! Don't omit it from comps initially because that'd prevent the element from being positioned absolutely (if necessary)
         comps.splice(i--, 1);
       } else {
         el = comp.t;
         nested && !(comp.sd < 0) && i && (a.matrix = getGlobalMatrix(el, false, false, true)); // moving a parent affects the position of children
 
-        if (comp.sd || b.isVisible && a.isVisible) {
+        if (b.isVisible && a.isVisible) {
           if (comp.sd < 0) {
             // swapping OUT (swap direction of -1 is out)
             state = new ElementState(el, props, fromState.simple);
@@ -824,15 +833,22 @@ _makeAbsolute = function _makeAbsolute(elState, fallbackNode, ignoreBatch) {
     run();
   }
 
-  return _batch ? _batch.timeline : animation;
+  var anim = _batch ? _batch.timeline : animation;
+
+  anim.revert = function () {
+    return _killFlip(anim, 1, 1);
+  }; // a Flip timeline should behave very different when reverting - it should actually jump to the end so that styles get cleared out.
+
+
+  return anim;
 },
     _interrupt = function _interrupt(tl) {
   tl.vars.onInterrupt && tl.vars.onInterrupt.apply(tl, tl.vars.onInterruptParams || []);
   tl.getChildren(true, false, true).forEach(_interrupt);
 },
-    _killFlip = function _killFlip(tl, action) {
+    _killFlip = function _killFlip(tl, action, force) {
   // action: 0 = nothing, 1 = complete, 2 = only kill (don't complete)
-  if (tl && tl.progress() < 1 && !tl.paused()) {
+  if (tl && tl.progress() < 1 && (!tl.paused() || force)) {
     if (action) {
       _interrupt(tl);
 
@@ -1407,13 +1423,14 @@ export var Flip = /*#__PURE__*/function () {
         fitChild = vars && vars.fitChild && _getEl(vars.fitChild),
         before = _parseElementState(toEl, props, simple, fromEl),
         after = _parseElementState(fromEl, 0, simple, before),
-        inlineProps = props ? _memoizedRemoveProps[props] : _removeProps;
+        inlineProps = props ? _memoizedRemoveProps[props] : _removeProps,
+        ctx = gsap.context();
 
     props && _applyProps(v, before.props);
 
-    if (runBackwards) {
-      _recordInlineStyles(after, inlineProps);
+    _recordInlineStyles(after, inlineProps);
 
+    if (runBackwards) {
       "immediateRender" in v || (v.immediateRender = true);
 
       v.onComplete = function () {
@@ -1425,6 +1442,11 @@ export var Flip = /*#__PURE__*/function () {
 
     absolute && _makeAbsolute(after, before);
     v = _fit(after, before, scale || fitChild, props, fitChild, v.duration || getVars ? v : 0);
+    ctx && !getVars && ctx.add(function () {
+      return function () {
+        return _applyInlineStyles(after);
+      };
+    });
     return getVars ? v : v.duration ? gsap.to(after.element, v) : null;
   };
 
@@ -1470,6 +1492,7 @@ export var Flip = /*#__PURE__*/function () {
       _setDoc(_body);
 
       _toArray = gsap.utils.toArray;
+      _getStyleSaver = gsap.core.getStyleSaver;
       var snap = gsap.utils.snap(0.1);
 
       _closestTenth = function _closestTenth(value, add) {
@@ -1480,7 +1503,7 @@ export var Flip = /*#__PURE__*/function () {
 
   return Flip;
 }();
-Flip.version = "3.9.1"; // function whenImagesLoad(el, func) {
+Flip.version = "3.12.4"; // function whenImagesLoad(el, func) {
 // 	let pending = [],
 // 		onLoad = e => {
 // 			pending.splice(pending.indexOf(e.target), 1);

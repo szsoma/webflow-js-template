@@ -1,10 +1,10 @@
 /*!
- * CSSRulePlugin 3.9.1
- * https://greensock.com
+ * CSSRulePlugin 3.12.4
+ * https://gsap.com
  *
- * @license Copyright 2008-2021, GreenSock. All rights reserved.
- * Subject to the terms at https://greensock.com/standard-license or for
- * Club GreenSock members, the agreement issued with that membership.
+ * @license Copyright 2008-2023, GreenSock. All rights reserved.
+ * Subject to the terms at https://gsap.com/standard-license or for
+ * Club GSAP members, the agreement issued with that membership.
  * @author: Jack Doyle, jack@greensock.com
 */
 
@@ -49,7 +49,7 @@ var gsap,
 };
 
 export var CSSRulePlugin = {
-  version: "3.9.1",
+  version: "3.12.4",
   name: "cssRule",
   init: function init(target, value, tween, index, targets) {
     if (!_checkRegister() || typeof target.cssText === "undefined") {

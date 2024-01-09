@@ -1,10 +1,10 @@
 /*!
- * ScrollToPlugin 3.9.1
- * https://greensock.com
+ * ScrollToPlugin 3.12.4
+ * https://gsap.com
  *
- * @license Copyright 2008-2021, GreenSock. All rights reserved.
- * Subject to the terms at https://greensock.com/standard-license or for
- * Club GreenSock members, the agreement issued with that membership.
+ * @license Copyright 2008-2023, GreenSock. All rights reserved.
+ * Subject to the terms at https://gsap.com/standard-license or for
+ * Club GSAP members, the agreement issued with that membership.
  * @author: Jack Doyle, jack@greensock.com
 */
 
@@ -16,6 +16,7 @@ var gsap,
     _body,
     _toArray,
     _config,
+    ScrollTrigger,
     _windowExists = function _windowExists() {
   return typeof window !== "undefined";
 },
@@ -111,7 +112,7 @@ var gsap,
     _initCore = function _initCore() {
   gsap = _getGSAP();
 
-  if (_windowExists() && gsap && document.body) {
+  if (_windowExists() && gsap && typeof document !== "undefined" && document.body) {
     _window = window;
     _body = document.body;
     _docEl = document.documentElement;
@@ -125,7 +126,7 @@ var gsap,
 };
 
 export var ScrollToPlugin = {
-  version: "3.9.1",
+  version: "3.12.4",
   name: "scrollTo",
   rawVars: 1,
   register: function register(core) {
@@ -147,6 +148,10 @@ export var ScrollToPlugin = {
     data.getY = _buildGetter(target, "y");
     data.x = data.xPrev = data.getX();
     data.y = data.yPrev = data.getY();
+    ScrollTrigger || (ScrollTrigger = gsap.core.globals().ScrollTrigger);
+    gsap.getProperty(target, "scrollBehavior") === "smooth" && gsap.set(target, {
+      scrollBehavior: "auto"
+    });
 
     if (snapType && snapType !== "none") {
       // disable scroll snapping to avoid strange behavior
@@ -243,9 +248,11 @@ export var ScrollToPlugin = {
 
     data.xPrev = data.x;
     data.yPrev = data.y;
+    ScrollTrigger && ScrollTrigger.update();
   },
   kill: function kill(property) {
-    var both = property === "scrollTo";
+    var both = property === "scrollTo",
+        i = this._props.indexOf(property);
 
     if (both || property === "scrollTo_x") {
       this.skipX = 1;
@@ -254,6 +261,9 @@ export var ScrollToPlugin = {
     if (both || property === "scrollTo_y") {
       this.skipY = 1;
     }
+
+    i > -1 && this._props.splice(i, 1);
+    return !this._props.length;
   }
 };
 ScrollToPlugin.max = _max;
