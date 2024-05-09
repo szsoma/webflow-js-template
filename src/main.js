@@ -17,6 +17,8 @@ import home from './pages/home/home'  // [imprort js file to main.js]
 // TODO don't forget to register plugins if you want to use GSAP
 //gsap.registerPlugin(ScrollTrigger, Flip);
 
+// GLOBAL SCRIPTS
+
 // Lenis SmoothScroll
 // function scroll()
 // {
@@ -31,6 +33,8 @@ import home from './pages/home/home'  // [imprort js file to main.js]
 // }
 // scroll();
 
+
+// PAGE RELATED SCRIPTS
 const isHome = document.querySelector("body").classList.contains("body--home");
 if (isHome) {
   home();
