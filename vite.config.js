@@ -12,6 +12,7 @@ export default defineConfig({
       protocol: 'ws',
     },
   },
+  publicDir: './public',
   build: {
     minify: true,
     manifest: true,
